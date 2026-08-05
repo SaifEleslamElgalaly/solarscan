@@ -1,0 +1,73 @@
+%%{init: {"theme":"base","themeVariables":{"fontSize":"15px","fontFamily":"Segoe UI, Arial, sans-serif"}}}%%
+erDiagram
+
+  users ||--o{ scans : "user_id (ON DELETE CASCADE)"
+  panels |o..o{ scans : "panel_id (logical, no enforced FK)"
+  users ||--o{ role_user : "user_id (CASCADE)"
+  roles ||--o{ role_user : "role_id (CASCADE)"
+  roles ||--o{ permission_role : "role_id (CASCADE)"
+  permissions ||--o{ permission_role : "permission_id (CASCADE)"
+
+  users {
+    bigint_unsigned id PK
+    varchar name
+    varchar email UK
+    timestamp email_verified_at
+    varchar password
+    varchar remember_token
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  scans {
+    bigint_unsigned id PK
+    bigint_unsigned user_id FK
+    varchar50 panel_id "logical to panels.panel_id; nullable"
+    varchar image_path
+    varchar result
+    double confidence
+    text recommendation
+    varchar255 box "JSON [x1 y1 x2 y2]; nullable; legacy/unused - classifier returns no box"
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  panels {
+    int id PK
+    varchar50 panel_id UK
+    varchar location
+    varchar model
+    varchar status "default Optimal"
+    timestamp created_at
+  }
+
+  roles {
+    int id PK
+    varchar name UK
+  }
+
+  permissions {
+    int id PK
+    varchar name UK
+  }
+
+  role_user {
+    int role_id FK "to roles.id, CASCADE"
+    bigint_unsigned user_id FK "to users.id, CASCADE"
+  }
+
+  permission_role {
+    int permission_id FK "to permissions.id, CASCADE"
+    int role_id FK "to roles.id, CASCADE"
+  }
+
+  settings {
+    int id PK "singleton row id=1"
+    varchar admin_name
+    varchar admin_email
+    varchar ml_endpoint
+    varchar api_token
+    tinyint auto_audit
+    tinyint high_contrast
+    tinyint notifications
+  }

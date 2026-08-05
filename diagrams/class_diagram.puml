@@ -1,0 +1,231 @@
+@startuml SolarScan_Class_Diagram
+' SolarScan — class diagram of the REAL implemented system (no drone concept).
+' Rendered black & white to match the thesis style.
+!pragma layout smetana
+skinparam backgroundColor white
+skinparam monochrome true
+skinparam shadowing false
+skinparam dpi 200
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam DefaultFontName Arial
+skinparam classBackgroundColor white
+skinparam classHeaderBackgroundColor white
+skinparam packageBackgroundColor white
+hide empty members
+hide circle
+
+' ======================= CLIENT (Flutter) =======================
+package "Client (Flutter)" {
+
+  class CameraScreen {
+    - controller : CameraController
+    - imageLabeler : ImageLabeler
+    - capturedFile : File
+    - liveResult : ScanResult
+    - isAutoScanning : bool
+    - captureTimer : Timer
+    --
+    + initState()
+    - initializeCamera()
+    - startPeriodicCapture()
+    - captureAndProcess()
+    - checkAutoScan()
+    - runLiveAnalysis()
+    - confirmUpload()
+    - pickFromGallery()
+    + build()
+  }
+
+  class DetectionPainter {
+    + objects : List<DetectedObject>
+    + liveResult : ScanResult
+    + isAnalyzing : bool
+    --
+    + paint(canvas, size)
+  }
+
+  class ScanNotifier {
+    - apiClient : ApiClient
+    --
+    + fetchScans()
+    + uploadImage(image : File) : ScanResult
+  }
+
+  class ScanState {
+    + scans : List<ScanResult>
+    + isLoading : bool
+    + error : String
+  }
+
+  class AuthNotifier {
+    - apiClient : ApiClient
+    --
+    + login(email, password) : bool
+    + logout()
+  }
+
+  class AuthState {
+    + user : User
+    + isLoading : bool
+    + error : String
+  }
+
+  class HostNotifier {
+    + setHost(ip)
+  }
+
+  class ApiClient {
+    + baseUrl : String
+    + dio : Dio
+  }
+
+  class ScanResult {
+    + id : int
+    + imagePath : String
+    + result : String
+    + confidence : double
+    + recommendation : String
+    + box : List<double>
+    + createdAt : DateTime
+    --
+    + fromJson(json) : ScanResult
+  }
+}
+
+' ======================= BACKEND (PHP) =======================
+package "Backend (PHP)" {
+
+  class ServiceApi {
+    .. routed by ?action= ..
+    + register()
+    + login()
+    + upload_scan()
+    + get_history()
+    + retrain()
+  }
+
+  class Database {
+    + pdo : PDO
+    + db = "solar_defect_db"
+  }
+}
+
+' ======================= AI SERVICE (FastAPI) =======================
+package "AI Service (FastAPI :8000)" {
+
+  class PredictService {
+    + model = "YOLOv8n-cls (best.pt)"
+    + classes[6] : Bird-drop, Clean, Dusty,\nElectrical-damage, Physical-Damage, Snow-Covered
+    + RECOMMENDATIONS : Map
+    --
+    + predict(file) : {class, confidence, recommendation}
+    + retrain() : {message}
+    .. image classification; top-1 < 0.5 -> "Unknown"; no bounding box ..
+  }
+}
+
+' ======================= PERSISTENCE (MySQL) =======================
+package "Persistence (MySQL: solar_defect_db)" {
+
+  class User {
+    + id : bigint <<PK>>
+    + name : varchar
+    + email : varchar <<UK>>
+    + password : varchar
+    + remember_token : varchar
+    + created_at : timestamp
+    + updated_at : timestamp
+  }
+
+  class Scan {
+    + id : bigint <<PK>>
+    + user_id : bigint <<FK>>
+    + panel_id : varchar
+    + image_path : varchar
+    + result : varchar
+    + confidence : double
+    + recommendation : text
+    + box : varchar  (legacy/unused)
+    + created_at : timestamp
+    + updated_at : timestamp
+  }
+
+  class Panel {
+    + id : int <<PK>>
+    + panel_id : varchar <<UK>>
+    + location : varchar
+    + model : varchar
+    + status : varchar
+    + created_at : timestamp
+  }
+
+  class Role {
+    + id : int <<PK>>
+    + name : varchar
+  }
+
+  class Permission {
+    + id : int <<PK>>
+    + name : varchar
+  }
+
+  class Settings {
+    + id : int <<PK>>
+    + admin_name : varchar
+    + admin_email : varchar
+    + ml_endpoint : varchar
+    + api_token : varchar
+    + auto_audit : tinyint
+    + high_contrast : tinyint
+    + notifications : tinyint
+  }
+}
+
+' ======================= DASHBOARD (PHP) =======================
+package "Admin Dashboard (PHP)" {
+
+  class AdminDashboard {
+    + viewStats()
+    + manageUsers()
+    + manageRoles()
+    + managePermissions()
+    + managePanels()
+    + viewReports()
+    + viewAlerts()
+    + editSettings()
+  }
+}
+
+' ======================= RELATIONSHIPS =======================
+CameraScreen --> ScanNotifier : uses
+CameraScreen ..> DetectionPainter : creates
+CameraScreen ..> ScanResult : liveResult
+ScanNotifier --> ApiClient : uses
+ScanNotifier --> ScanState : manages
+ScanState "1" o-- "*" ScanResult : contains
+AuthNotifier --> ApiClient : uses
+AuthNotifier --> AuthState : manages
+AuthState "1" --> "0..1" User : user
+HostNotifier ..> ApiClient : sets baseUrl
+
+ApiClient ..> ServiceApi : HTTP (Dio)
+ServiceApi --> Database : uses (PDO)
+ServiceApi ..> PredictService : cURL /predict, /retrain
+
+Database --> User : persists
+Database --> Scan : persists
+Database --> Panel : persists
+Database --> Role : persists
+Database --> Permission : persists
+Database --> Settings : persists
+
+User "1" --> "*" Scan : has (CASCADE)
+Scan "*" --> "0..1" Panel : panel_id (logical)
+User "*" -- "*" Role : role_user
+Role "*" -- "*" Permission : permission_role
+
+AdminDashboard --> Database : reads
+AdminDashboard ..> Scan : displays
+
+@enduml

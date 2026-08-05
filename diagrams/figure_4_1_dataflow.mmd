@@ -1,0 +1,69 @@
+%%{init: {"theme":"base","themeVariables":{"fontSize":"16px","fontFamily":"Segoe UI, Arial, sans-serif"},"flowchart":{"curve":"basis","nodeSpacing":50,"rankSpacing":65,"htmlLabels":true}}}%%
+flowchart TB
+
+  %% ==================== CLIENT ====================
+  subgraph CLIENT["Client (Flutter)&nbsp;&nbsp;&nbsp;&nbsp;"]
+    CAM["Camera Capture<br/><i>camera_screen.dart</i>"]
+    PROV["ScanNotifier<br/><i>scan_provider.dart</i>"]
+    RES["Result Screen<br/>class · confidence% · recommendation<br/>(no box overlay)"]
+    CAM --> PROV
+  end
+
+  %% ==================== BACKEND ====================
+  subgraph BACKEND["Backend (PHP)&nbsp;&nbsp;&nbsp;&nbsp;"]
+    API["service_api.php<br/>upload_scan · get_history · retrain<br/>register · login"]
+    UP["uploads/<br/>(saved image)"]
+    API --> UP
+  end
+
+  %% ==================== AI SERVICE ====================
+  subgraph AI["AI Service&nbsp;&nbsp;&nbsp;&nbsp;"]
+    PRED["POST /predict · 127.0.0.1:8000<br/>YOLOv8 classification (yolov8n-cls)<br/>6 classes, top-1<br/>conf &lt; 0.5 → Unknown"]
+    RETR["POST /retrain · :8000"]
+  end
+
+  %% ==================== DATABASE ====================
+  subgraph DB["Database (MySQL)&nbsp;&nbsp;&nbsp;&nbsp;"]
+    SCANS[("scans")]
+    USERS[("users")]
+    OTHER[("panels · roles<br/>permissions · settings")]
+  end
+
+  %% ==================== DASHBOARD ====================
+  subgraph DASH["Admin Dashboard (PHP)&nbsp;&nbsp;&nbsp;&nbsp;"]
+    IDX["index.php (stats)<br/>users · panels · roles · permissions<br/>reports · alerts · settings"]
+  end
+
+  %% ---------- Scan flow ----------
+  PROV -- "image + user_id&nbsp;" --> API
+  API -- "cURL: file&nbsp;" --> PRED
+  PRED -- "JSON: class, confidence, recommendation&nbsp;" --> API
+  API -- "INSERT scans&nbsp;" --> SCANS
+  API -- "JSON result&nbsp;" --> RES
+
+  %% ---------- History ----------
+  PROV -- "?action=get_history&nbsp;" --> API
+  API -- "SELECT scans&nbsp;" --> SCANS
+
+  %% ---------- Dashboard reads ----------
+  IDX -- "SELECT / COUNT&nbsp;" --> SCANS
+  IDX -. "SELECT&nbsp;" .-> USERS
+  IDX -. "SELECT&nbsp;" .-> OTHER
+
+  %% ---------- Retrain ----------
+  IDX -- "?action=retrain&nbsp;" --> API
+  API -- "cURL: /retrain&nbsp;" --> RETR
+  RETR -- "JSON: message&nbsp;" --> API
+
+  %% ---------- styling ----------
+  classDef client  fill:#E3F2FD,stroke:#1565C0,stroke-width:1px,color:#0D2A4A;
+  classDef backend fill:#FFF3E0,stroke:#E65100,stroke-width:1px,color:#3E2200;
+  classDef ai      fill:#E8F5E9,stroke:#2E7D32,stroke-width:1px,color:#13351A;
+  classDef db      fill:#F3E5F5,stroke:#6A1B9A,stroke-width:1px,color:#2E0B3F;
+  classDef dash    fill:#ECEFF1,stroke:#37474F,stroke-width:1px,color:#1A2227;
+
+  class CAM,PROV,RES client;
+  class API,UP backend;
+  class PRED,RETR ai;
+  class SCANS,USERS,OTHER db;
+  class IDX dash;

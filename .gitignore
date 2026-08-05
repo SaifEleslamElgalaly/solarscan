@@ -1,0 +1,12 @@
+node_modules/
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+
+# Weights live on Hugging Face; datasets are third-party
+*.pt
+*.pth
+*.onnx
+runs/
+dataset/

@@ -10,3 +10,28 @@ Thumbs.db
 *.onnx
 runs/
 dataset/
+
+# Private data and local settings
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.jks
+*.keystore
+key.properties
+local.properties
+backend_php/uploads/
+*.log
+solar_defect_db.sql
+*-dump.sql
+*-live.sql
+solar panel dataset/
+train data/
+*.rar
+*.zip
+
+# Generated Flutter/Android files
+**/.gradle/
+**/.kotlin/
+**/build/

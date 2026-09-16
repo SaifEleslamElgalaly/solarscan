@@ -126,3 +126,9 @@ belongs to its original authors.
 ---
 
 Built by Saif Elgalaly. More work: <https://saifeleslamelgalaly.github.io/>
+
+## Preservation and recovery
+
+Flutter platform source files, lockfile and non-personal logos are included.
+Some UI assets and all private data remain in the encrypted private backup.
+See [source and private recovery assets](docs/BACKUP_AND_RESTORE.md) before restoring.
